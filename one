@@ -1,0 +1,186 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define MAX_TASKS 100
+#define MAX_LENGTH 50
+
+typedef struct {
+    int id;
+    char description[MAX_LENGTH];
+    bool completed;
+} Task;
+
+Task tasks[MAX_TASKS];
+int taskCount = 0;
+
+// 函数声明
+void displayMenu();
+void addTask();
+void viewTasks();
+void deleteTask();
+void markCompleted();
+void saveToFile();
+void loadFromFile();
+
+int main() {
+    loadFromFile();
+
+    int choice;
+    do {
+        displayMenu();
+        printf("请输入您的选择: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+        case 1:
+            addTask();
+            break;
+        case 2:
+            viewTasks();
+            break;
+        case 3:
+            deleteTask();
+            break;
+        case 4:
+            markCompleted();
+            break;
+        case 5:
+            saveToFile();
+            printf("任务已保存，程序退出。\n");
+            break;
+        default:
+            printf("无效的选择，请重新输入。\n");
+        }
+    } while (choice != 5);
+
+    return 0;
+}
+
+void displayMenu() {
+    printf("\n=== 简易任务管理系统 ===\n");
+    printf("1. 添加任务\n");
+    printf("2. 查看所有任务\n");
+    printf("3. 删除任务\n");
+    printf("4. 标记任务为已完成\n");
+    printf("5. 保存并退出\n");
+}
+
+void addTask() {
+    if (taskCount >= MAX_TASKS) {
+        printf("任务列表已满!\n");
+        return;
+    }
+
+    Task newTask;
+    newTask.id = taskCount + 1;
+    newTask.completed = false;
+
+    printf("请输入任务描述: ");
+    getchar(); // 清除输入缓冲区
+    fgets(newTask.description, MAX_LENGTH, stdin);
+    newTask.description[strcspn(newTask.description, "\n")] = '\0'; // 移除换行符
+
+    tasks[taskCount] = newTask;
+    taskCount++;
+
+    printf("任务添加成功!\n");
+}
+
+void viewTasks() {
+    if (taskCount == 0) {
+        printf("当前没有任务。\n");
+        return;
+    }
+
+    printf("\n=== 任务列表 ===\n");
+    printf("ID\t状态\t描述\n");
+    for (int i = 0; i < taskCount; i++) {
+        printf("%d\t%s\t%s\n",
+            tasks[i].id,
+            tasks[i].completed ? "[✓]" : "[ ]",
+            tasks[i].description);
+    }
+}
+
+void deleteTask() {
+    if (taskCount == 0) {
+        printf("当前没有任务可删除。\n");
+        return;
+    }
+
+    viewTasks();
+    int id;
+    printf("请输入要删除的任务ID: ");
+    scanf("%d", &id);
+
+    int found = 0;
+    for (int i = 0; i < taskCount; i++) {
+        if (tasks[i].id == id) {
+            found = 1;
+            // 将后面的任务前移
+            for (int j = i; j < taskCount - 1; j++) {
+                tasks[j] = tasks[j + 1];
+            }
+            taskCount--;
+            printf("任务删除成功!\n");
+            break;
+        }
+    }
+
+    if (!found) {
+        printf("未找到ID为%d的任务。\n", id);
+    }
+}
+
+void markCompleted() {
+    if (taskCount == 0) {
+        printf("当前没有任务可标记。\n");
+        return;
+    }
+
+    viewTasks();
+    int id;
+    printf("请输入要标记为已完成的任务ID: ");
+    scanf("%d", &id);
+
+    int found = 0;
+    for (int i = 0; i < taskCount; i++) {
+        if (tasks[i].id == id) {
+            tasks[i].completed = true;
+            found = 1;
+            printf("任务标记为已完成!\n");
+            break;
+        }
+    }
+
+    if (!found) {
+        printf("未找到ID为%d的任务。\n", id);
+    }
+}
+
+void saveToFile() {
+    FILE* file = fopen("tasks.dat", "wb");
+    if (file == NULL) {
+        printf("无法保存任务数据!\n");
+        return;
+    }
+
+    fwrite(&taskCount, sizeof(int), 1, file);
+    fwrite(tasks, sizeof(Task), taskCount, file);
+
+    fclose(file);
+}
+
+void loadFromFile() {
+    FILE* file = fopen("tasks.dat", "rb");
+    if (file == NULL) {
+        return; // 文件不存在是正常情况
+    }
+
+    fread(&taskCount, sizeof(int), 1, file);
+    fread(tasks, sizeof(Task), taskCount, file);
+
+    fclose(file);
+}
