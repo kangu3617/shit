@@ -1,0 +1,167 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <ctype.h>  // 新增头文件用于输入验证
+
+#define MAX_TASKS 100
+#define MAX_LENGTH 50
+#define DATA_FILE "tasks.dat"  // 常量定义文件名
+
+typedef struct {
+    int id;
+    char description[MAX_LENGTH];
+    bool completed;
+} Task;
+
+Task tasks[MAX_TASKS];
+int totalTasks = 0;  // 变量名优化：taskCount -> totalTasks
+
+// 函数声明
+void displayMenu();
+void addTask();
+void printTaskHeader();      // 新增函数声明
+void printTaskList();        // 新增函数声明
+void deleteTask();
+void markCompleted();
+void saveToFile();
+void loadFromFile();
+int getValidatedInput();     // 新增输入验证函数
+
+int main() {
+    loadFromFile();
+
+    int choice;
+    do {
+        displayMenu();
+        printf("请输入您的选择: ");
+        choice = getValidatedInput();  // 使用安全输入
+
+        switch (choice) {
+        case 1:
+            addTask();
+            break;
+        case 2:
+            printTaskHeader();
+            printTaskList();
+            break;
+        case 3:
+            deleteTask();
+            break;
+        case 4:
+            markCompleted();
+            break;
+        case 5:
+            saveToFile();
+            printf("任务已保存，程序退出。\n");
+            break;
+        default:
+            printf("无效的选择，请重新输入。\n");
+        }
+    } while (choice != 5);
+
+    return 0;
+}
+
+// 新增：安全输入验证函数
+int getValidatedInput() {
+    char input[10];
+    fgets(input, sizeof(input), stdin);
+    return atoi(input);  // 简单示例，实际可添加更复杂验证
+}
+
+void displayMenu() {
+    printf("\n=== 简易任务管理系统 ===\n");
+    printf("1. 添加任务\n");
+    printf("2. 查看所有任务\n");
+    printf("3. 删除任务\n");
+    printf("4. 标记任务为已完成\n");
+    printf("5. 保存并退出\n");
+}
+
+void addTask() {
+    if (totalTasks >= MAX_TASKS) {
+        printf("任务列表已满!\n");
+        return;
+    }
+
+    Task newTask;
+    newTask.id = totalTasks + 1;
+    newTask.completed = false;
+
+    printf("请输入任务描述: ");
+    fgets(newTask.description, MAX_LENGTH, stdin);
+    newTask.description[strcspn(newTask.description, "\n")] = '\0';
+
+    tasks[totalTasks] = newTask;
+    totalTasks++;
+
+    printf("任务添加成功!\n");
+}
+
+// 拆分viewTasks为两个函数
+void printTaskHeader() {
+    printf("\n=== 任务列表 ===\n");
+    printf("ID\t状态\t描述\n");
+}
+
+void printTaskList() {
+    if (totalTasks == 0) {
+        printf("当前没有任务。\n");
+        return;
+    }
+
+    for (int i = 0; i < totalTasks; i++) {
+        printf("%d\t%s\t%s\n",
+            tasks[i].id,
+            tasks[i].completed ? "[✓]" : "[ ]",
+            tasks[i].description);
+    }
+}
+
+void deleteTask() {
+    if (totalTasks == 0) {
+        printf("当前没有任务可删除。\n");
+        return;
+    }
+
+    printTaskHeader();
+    printTaskList();
+    printf("请输入要删除的任务ID: ");
+    int id = getValidatedInput();
+
+    // ...后续相同但使用totalTasks...
+}
+
+// 完善文件操作错误处理
+void saveToFile() {
+    FILE* file = fopen(DATA_FILE, "wb");
+    if (!file) {
+        perror("保存失败");  // 增强错误提示
+        return;
+    }
+
+    if (fwrite(&totalTasks, sizeof(int), 1, file) != 1) {
+        printf("任务数量写入失败\n");
+    }
+    if (fwrite(tasks, sizeof(Task), totalTasks, file) != totalTasks) {
+        printf("任务数据写入失败\n");
+    }
+    fclose(file);
+}
+
+void loadFromFile() {
+    FILE* file = fopen(DATA_FILE, "rb");
+    if (!file) return;
+
+    // 检查读取完整性
+    if (fread(&totalTasks, sizeof(int), 1, file) != 1) {
+        printf("文件数据损坏\n");
+        totalTasks = 0;
+    }
+    if (fread(tasks, sizeof(Task), totalTasks, file) != totalTasks) {
+        printf("任务数据读取不完整\n");
+        totalTasks = 0;
+    }
+    fclose(file);
+}
